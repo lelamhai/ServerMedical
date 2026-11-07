@@ -20,10 +20,8 @@ namespace ServerMedical.Services.Auth
         {
             var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, _config["Jwt:Subject"]!),
+                new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-
-                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
 
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role)

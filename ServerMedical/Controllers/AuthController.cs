@@ -1,11 +1,12 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using ServerMedical.Entities;
 using ServerMedical.Models.Request.Author;
-using ServerMedical.Models.Response;
 using ServerMedical.Services.Auth;
 using ServerMedical.Utils;
+using ServerMedical.Models.Response.Author;
 
 namespace ServerMedical.Controllers
 {
@@ -114,56 +115,133 @@ namespace ServerMedical.Controllers
             
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login(RequestLogin request)
         {
             if (request.Email == null)
             {
-                return BadRequest(new WrapperData<string>
-                {
-                    Message = "Email is required.",
-                    Data = null,
-                });
-            }
-
+                return BadRequest(new WrapperData<string> { Message = "Email is required.", Data = null });
+            } 
+                
             if (request.Password == null)
             {
-                return BadRequest(new WrapperData<string>
-                {
-                    Message = "Password is required.",
-                    Data = null,
-                });
+                return BadRequest(new WrapperData<string> { Message = "Password is required.", Data = null });
             }
 
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-            if (user == null)
-            {
-                return BadRequest(new WrapperData<string>
-                {
-                    Message = "Invalid email or password.",
-                    Data = null,
-                });
-            }
+            if (user == null) return BadRequest(new WrapperData<string> { Message = "Invalid email or password.", Data = null });
+
             var passwordVerificationResult = new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password);
             if (passwordVerificationResult != PasswordVerificationResult.Success)
             {
-                return BadRequest(new WrapperData<string>
-                {
-                    Message = "Invalid email or password.",
-                    Data = null,
-                });
+                return BadRequest(new WrapperData<string> { Message = "Invalid email or password.", Data = null });
             }
 
             var token = _tokens.CreateAccessToken(user);
             var refresh = _tokens.CreateRefreshToken(user.UserId);
-            _db.RefreshTokens.Add(refresh);
-            await _db.SaveChangesAsync();
 
-            return Ok(new ResponseLogin(token, refresh.Token, refresh.ExpiresAt));
-            
+            var existingToken = await _db.RefreshTokens.FirstOrDefaultAsync(rt => rt.UserId == user.UserId);
+
+            if (existingToken != null)
+            {
+                existingToken.Token = refresh.Token;
+                existingToken.ExpiresAt = refresh.ExpiresAt;
+                existingToken.IsRevoked = false;
+            }
+            else
+            {
+                _db.RefreshTokens.Add(refresh);
+            }
+
+            await _db.SaveChangesAsync();
+            return Ok(new WrapperData<ResponseLogin> { Message = "Login successful.", Data = new ResponseLogin(token, refresh.Token, refresh.ExpiresAt) });
         }
 
-        [HttpGet]
+        [AllowAnonymous]
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken(RequestRefreshToken request)
+        {
+            if (string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                return BadRequest(new WrapperData<string>
+                {
+                    Message = "Refresh token is required.",
+                    Data = null,
+                });
+            }
+
+            var storedToken = await _db.RefreshTokens
+                .Include(token => token.User)
+                .FirstOrDefaultAsync(token => token.Token == request.RefreshToken);
+
+            if (storedToken?.User == null || storedToken.IsRevoked == true || storedToken.ExpiresAt <= DateTime.UtcNow)
+            {
+                return Unauthorized(new WrapperData<string>
+                {
+                    Message = "Refresh token is invalid or expired.",
+                    Data = null,
+                });
+            }
+
+            var accessToken = _tokens.CreateAccessToken(storedToken.User);
+            var newRefreshToken = _tokens.CreateRefreshToken(storedToken.User.UserId);
+
+            storedToken.Token = newRefreshToken.Token;
+            storedToken.ExpiresAt = newRefreshToken.ExpiresAt;
+            storedToken.IsRevoked = false;
+
+            await _db.SaveChangesAsync();
+
+            return Ok(new WrapperData<ResponseLogin>
+            {
+                Message = "Token refreshed successfully.",
+                Data = new ResponseLogin(accessToken, newRefreshToken.Token, newRefreshToken.ExpiresAt),
+            });
+        }
+
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout(RequestLogout request)
+        {
+            if (string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                return BadRequest(new WrapperData<string>
+                {
+                    Message = "Refresh token is required.",
+                    Data = null,
+                });
+            }
+
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var refreshToken = await _db.RefreshTokens.FirstOrDefaultAsync(token =>
+                token.Token == request.RefreshToken && token.UserId == userId);
+
+            if (refreshToken == null)
+            {
+                return NotFound(new WrapperData<string>
+                {
+                    Message = "Refresh token not found.",
+                    Data = null,
+                });
+            }
+
+            refreshToken.IsRevoked = true;
+            await _db.SaveChangesAsync();
+
+            return Ok(new WrapperData<string>
+            {
+                Message = "Logout successful.",
+                Data = null,
+            });
+        }
+
+        [HttpGet("test")]
         public async Task<IActionResult> GetUsers()
         {
             var users = await _db.Users.ToListAsync();

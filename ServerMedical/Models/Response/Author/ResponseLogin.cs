@@ -1,4 +1,4 @@
-﻿namespace ServerMedical.Models.Response
+﻿namespace ServerMedical.Models.Response.Author
 {
     public class ResponseLogin
     {
@@ -12,7 +12,6 @@
             this.refreshToken = refreshToken;
             this.refreshExpiresAt = refreshExpiresAt;
         }
-
         public string AccessToken
         {
             get { return accessToken; }
