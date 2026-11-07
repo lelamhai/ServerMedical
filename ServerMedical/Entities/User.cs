@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ServerMedical.Models;
+namespace ServerMedical.Entities;
 
 public partial class User
 {
@@ -25,9 +25,7 @@ public partial class User
 
     public string? BloodType { get; set; }
 
-    public string Avatar { get; set; } = null!;
-
-    public bool? IsActive { get; set; }
+    public string? Avatar { get; set; }
 
     public string Role { get; set; } = null!;
 

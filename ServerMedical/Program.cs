@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ServerMedical.Entities;
 using ServerMedical.Models;
 
 var builder = WebApplication.CreateBuilder(args);

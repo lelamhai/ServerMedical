@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ServerMedical.Models;
+namespace ServerMedical.Entities;
 
 public partial class RefreshToken
 {

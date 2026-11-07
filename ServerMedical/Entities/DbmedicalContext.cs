@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
-namespace ServerMedical.Models;
+namespace ServerMedical.Entities;
 
 public partial class DbmedicalContext : DbContext
 {
@@ -28,9 +28,9 @@ public partial class DbmedicalContext : DbContext
     {
         modelBuilder.Entity<RefreshToken>(entity =>
         {
-            entity.HasKey(e => e.TokenId).HasName("PK__RefreshT__658FEE8A7DEC53CF");
+            entity.HasKey(e => e.TokenId).HasName("PK__RefreshT__658FEE8AEA65ABF7");
 
-            entity.HasIndex(e => e.Token, "UQ__RefreshT__1EB4F817FE26A443").IsUnique();
+            entity.HasIndex(e => e.Token, "UQ__RefreshT__1EB4F81794E181E3").IsUnique();
 
             entity.Property(e => e.TokenId).HasColumnName("TokenID");
             entity.Property(e => e.CreatedAt)
@@ -51,13 +51,13 @@ public partial class DbmedicalContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CCAC74DF18F3");
+            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CCACA39504FB");
 
-            entity.HasIndex(e => e.Phone, "UQ__Users__5C7E359E89C3A9D1").IsUnique();
+            entity.HasIndex(e => e.Phone, "UQ__Users__5C7E359EF0A228CB").IsUnique();
 
-            entity.HasIndex(e => e.GoogleId, "UQ__Users__A6FBF31B7E615EE1").IsUnique();
+            entity.HasIndex(e => e.GoogleId, "UQ__Users__A6FBF31B50538B7F").IsUnique();
 
-            entity.HasIndex(e => e.Email, "UQ__Users__A9D10534C88934B1").IsUnique();
+            entity.HasIndex(e => e.Email, "UQ__Users__A9D10534F4E3B3DA").IsUnique();
 
             entity.Property(e => e.UserId).HasColumnName("UserID");
             entity.Property(e => e.Avatar)
@@ -78,7 +78,6 @@ public partial class DbmedicalContext : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(false)
                 .HasColumnName("GoogleID");
-            entity.Property(e => e.IsActive).HasDefaultValue(false);
             entity.Property(e => e.LastName).HasMaxLength(100);
             entity.Property(e => e.PasswordHash)
                 .HasMaxLength(255)
@@ -94,9 +93,9 @@ public partial class DbmedicalContext : DbContext
 
         modelBuilder.Entity<UserDevice>(entity =>
         {
-            entity.HasKey(e => e.DeviceId).HasName("PK__UserDevi__49E12331189D6957");
+            entity.HasKey(e => e.DeviceId).HasName("PK__UserDevi__49E12331E9E898DD");
 
-            entity.HasIndex(e => e.Fcmtoken, "UQ__UserDevi__BBACE64E809A41D1").IsUnique();
+            entity.HasIndex(e => e.Fcmtoken, "UQ__UserDevi__BBACE64E119C97D9").IsUnique();
 
             entity.Property(e => e.DeviceId).HasColumnName("DeviceID");
             entity.Property(e => e.CreatedAt)
