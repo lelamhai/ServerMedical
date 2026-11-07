@@ -1,8 +1,8 @@
-﻿using Microsoft.Identity.Client.NativeInterop;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using ServerMedical.Entities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace ServerMedical.Services.Auth
@@ -18,31 +18,46 @@ namespace ServerMedical.Services.Auth
 
         public string CreateAccessToken(User user)
         {
-            //var claims = new List<Claim>
-            //{
-            //    new Claim(JwtRegisteredClaimNames.Sub, _config["Jwt:Subject"]!),
-            //    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-    
-            //    new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-    
-            //    new Claim(ClaimTypes.Email, user.Email),
-            //    new Claim(ClaimTypes.Role, user.Role)
-            //};
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, _config["Jwt:Subject"]!),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
 
-            //var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]!);
-            //var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
+                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
 
-            //var expires = DateTime.UtcNow.AddMinutes(int.Parse(_config["Jwt:AccessTokenExpirationMinutes"] ?? "60"));
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role)
+            };
 
-            //var token = new JwtSecurityToken(
-            //    issuer: _config["Jwt:Issuer"],
-            //    audience: _config["Jwt:Audience"],
-            //    claims: claims,
-            //    expires: expires,
-            //    signingCredentials: creds);
+            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]!);
+            var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
 
-            //return new JwtSecurityTokenHandler().WriteToken(token);
-            return "token";
+            var expires = DateTime.UtcNow.AddMinutes(int.Parse(_config["Jwt:ExpireMinutes"] ?? "15"));
+
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: expires,
+                signingCredentials: creds);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public RefreshToken CreateRefreshToken(int userId)
+        {
+            var lifetime = TimeSpan.FromDays(int.Parse(_config["Jwt:RefreshTokenExpireDays"] ?? "7"));
+            var bytes = new byte[64];
+            RandomNumberGenerator.Fill(bytes);
+            var random = Convert.ToBase64String(bytes);
+            return new RefreshToken
+            {
+                UserId = userId,
+                Token = random,
+                IsRevoked = false,
+                ExpiresAt = DateTime.UtcNow.Add(lifetime),
+                CreatedAt = DateTime.UtcNow
+            };
         }
     }
 }
