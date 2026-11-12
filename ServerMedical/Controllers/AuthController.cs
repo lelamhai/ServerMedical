@@ -14,10 +14,10 @@ namespace ServerMedical.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly DbmedicalContext _db;
+        private readonly MedicalContext _db;
         private readonly ITokenService _tokens;
 
-        public AuthController(DbmedicalContext db, ITokenService tokens)
+        public AuthController(MedicalContext db, ITokenService tokens)
         {
             _db = db;
             _tokens = tokens;
