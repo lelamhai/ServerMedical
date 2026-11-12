@@ -1,4 +1,4 @@
-namespace ServerMedical.Models.Response.Campaign;
+namespace ServerMedical.Models.Response.RegisterCampaign;
 
 public sealed class ResponseRegisterCampaign
 {

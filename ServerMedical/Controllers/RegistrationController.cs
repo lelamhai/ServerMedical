@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ServerMedical.Entities;
-using ServerMedical.Models.Response.Campaign;
+using ServerMedical.Models.Response.RegisterCampaign;
 using ServerMedical.Utils;
 
 namespace ServerMedical.Controllers;
