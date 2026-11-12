@@ -289,6 +289,111 @@ public class CampaignController : ControllerBase
         });
     }
 
+    [HttpGet("report/{id:int}")]
+    public async Task<IActionResult> GetReport(int id)
+    {
+        var campaign = await _db.Campaigns
+            .AsNoTracking()
+            .Where(item => item.CampaignId == id)
+            .Select(item => new
+            {
+                item.CampaignId,
+                item.Title,
+                item.EventDate
+            })
+            .FirstOrDefaultAsync();
+
+        if (campaign == null)
+        {
+            return NotFound(new WrapperData<string>
+            {
+                Message = "Campaign not found.",
+                Data = null
+            });
+        }
+
+        var totalRegisteredVolunteers = await _db.Registrations
+            .CountAsync(registration => registration.CampaignId == id);
+
+        var screenings = await _db.HealthScreenings
+            .AsNoTracking()
+            .Include(screening => screening.BloodTestResult)
+            .Where(screening => screening.CampaignId == id)
+            .ToListAsync();
+
+        var successfulDonations = screenings
+            .Where(screening => screening.BloodVolume > 0)
+            .ToList();
+
+        var unsuccessfulDonations = screenings.Count - successfulDonations.Count;
+
+        var bloodVolumeByType = successfulDonations
+            .GroupBy(screening => string.IsNullOrWhiteSpace(screening.BloodTestResult?.BloodType)
+                ? "Unknown"
+                : screening.BloodTestResult.BloodType.Trim().ToUpperInvariant())
+            .Select(group => new ResponseBloodTypeReport
+            {
+                BloodType = group.Key,
+                TotalBloodVolume = group.Sum(screening => screening.BloodVolume ?? 0)
+            })
+            .OrderBy(item => item.BloodType)
+            .ToList();
+
+        var response = new ResponseCampaignReport
+        {
+            CampaignId = campaign.CampaignId,
+            Title = campaign.Title,
+            EventDate = campaign.EventDate,
+            TotalRegisteredVolunteers = totalRegisteredVolunteers,
+            TotalSuccessfulDonations = successfulDonations.Count,
+            TotalUnsuccessfulDonations = unsuccessfulDonations,
+            TotalBloodVolume = successfulDonations.Sum(screening => screening.BloodVolume ?? 0),
+            BloodVolumeByType = bloodVolumeByType
+        };
+
+        return Ok(new WrapperData<ResponseCampaignReport>
+        {
+            Message = "Campaign report retrieved successfully.",
+            Data = response
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return BadRequest(new WrapperData<string>
+            {
+                Message = "Enter a search text for campaign title or location.",
+                Data = null
+            });
+        }
+
+        var normalizedText = text.Trim();
+
+        var campaignsQuery = _db.Campaigns
+            .Include(c => c.CampaignAssignments)
+                .ThenInclude(assignment => assignment.Staff)
+            .AsNoTracking()
+            .Where(c => c.Title.Contains(normalizedText) || c.Location.Contains(normalizedText));
+
+        var campaigns = await campaignsQuery
+            .OrderBy(c => c.EventDate)
+            .ToListAsync();
+
+        var response = campaigns.Select(MapCampaignResponse).ToList();
+
+        return Ok(new WrapperData<List<ResponseCampaign>>
+        {
+            Message = response.Count == 0
+                ? "No campaigns found."
+                : "Campaigns retrieved successfully.",
+            Data = response
+        });
+    }
+
     [HttpGet("detail/{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
