@@ -127,7 +127,7 @@ public class CampaignController : ControllerBase
         return Ok(new WrapperData<ResponseCampaign>
             {
                 Message = "Campaign created successfully.",
-                Data = response
+                Data = null
             });
     }
 
@@ -354,6 +354,48 @@ public class CampaignController : ControllerBase
         return Ok(new WrapperData<ResponseCampaignReport>
         {
             Message = "Campaign report retrieved successfully.",
+            Data = response
+        });
+    }
+
+    [HttpGet("list")]
+    public async Task<IActionResult> GetList([FromQuery] int page = 1)
+    {
+        const int pageSize = 10;
+
+        if (page < 1)
+        {
+            return BadRequest(new WrapperData<string>
+            {
+                Message = "Page must be greater than or equal to 1.",
+                Data = null
+            });
+        }
+
+        var totalItems = await _db.Campaigns.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+        var campaigns = await _db.Campaigns
+            .AsNoTracking()
+            .Include(campaign => campaign.CampaignAssignments)
+                .ThenInclude(assignment => assignment.Staff)
+            .OrderByDescending(campaign => campaign.EventDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var response = new ResponseCampaignPage
+        {
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            TotalPages = totalPages,
+            Items = campaigns.Select(MapCampaignResponse).ToList()
+        };
+
+        return Ok(new WrapperData<ResponseCampaignPage>
+        {
+            Message = "Campaign list retrieved successfully.",
             Data = response
         });
     }
