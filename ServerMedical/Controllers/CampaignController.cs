@@ -12,7 +12,7 @@ namespace ServerMedical.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin")]
+
 public class CampaignController : ControllerBase
 {
     private readonly MedicalContext _db;
@@ -21,7 +21,7 @@ public class CampaignController : ControllerBase
     {
         _db = db;
     }
-
+    [Authorize(Roles = "Admin")]
     [HttpPost("create")]
     public async Task<IActionResult> Create(RequestCreateCampaign request)
     {
@@ -130,7 +130,7 @@ public class CampaignController : ControllerBase
                 Data = null
             });
     }
-
+    [Authorize(Roles = "Admin")]
     [HttpPut("update/{id:int}")]
     public async Task<IActionResult> Update(int id, RequestCreateCampaign request)
     {
@@ -234,7 +234,7 @@ public class CampaignController : ControllerBase
             Data = MapCampaignResponse(campaign)
         });
     }
-
+    [Authorize(Roles = "Admin")]
     [HttpDelete("delete/{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -288,7 +288,7 @@ public class CampaignController : ControllerBase
             Data = null
         });
     }
-
+    [Authorize(Roles = "Admin")]
     [HttpGet("report/{id:int}")]
     public async Task<IActionResult> GetReport(int id)
     {
@@ -357,7 +357,7 @@ public class CampaignController : ControllerBase
             Data = response
         });
     }
-
+    [AllowAnonymous]
     [HttpGet("list")]
     public async Task<IActionResult> GetList([FromQuery] int page = 1)
     {
@@ -435,7 +435,7 @@ public class CampaignController : ControllerBase
             Data = response
         });
     }
-
+    [AllowAnonymous]
     [HttpGet("detail/{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {

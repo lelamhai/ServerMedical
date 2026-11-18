@@ -12,7 +12,7 @@ namespace ServerMedical.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Staff")]
+//[Authorize(Roles = "Staff")]
 public class HealthScreeningController : ControllerBase
 {
     private readonly MedicalContext _db;
