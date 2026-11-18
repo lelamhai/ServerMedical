@@ -237,7 +237,7 @@ public class HealthScreeningController : ControllerBase
         return Ok(new WrapperData<ResponseHealthScreening>
         {
             Message = "Health screening updated successfully.",
-            Data = response
+            Data = null
         });
     }
 
