@@ -132,7 +132,22 @@ namespace ServerMedical.Controllers
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             if (user == null) return BadRequest(new WrapperData<string> { Message = "Invalid email or password.", Data = null });
 
-            var passwordVerificationResult = new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password);
+            if (string.IsNullOrWhiteSpace(user.PasswordHash))
+            {
+                return BadRequest(new WrapperData<string> { Message = "Invalid email or password.", Data = null });
+            }
+
+            PasswordVerificationResult passwordVerificationResult;
+            try
+            {
+                passwordVerificationResult = new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password);
+            }
+            catch (FormatException)
+            {
+                // Malformed or legacy hash data must fail closed instead of causing a server error.
+                return BadRequest(new WrapperData<string> { Message = "Invalid email or password.", Data = null });
+            }
+
             if (passwordVerificationResult != PasswordVerificationResult.Success)
             {
                 return BadRequest(new WrapperData<string> { Message = "Invalid email or password.", Data = null });

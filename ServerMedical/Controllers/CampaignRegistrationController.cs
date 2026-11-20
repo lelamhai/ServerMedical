@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +11,7 @@ namespace ServerMedical.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin, Staff")]
+[Authorize]
 public class CampaignRegistrationController : ControllerBase
 {
     private readonly MedicalContext _db;
@@ -19,6 +21,71 @@ public class CampaignRegistrationController : ControllerBase
         _db = db;
     }
 
+    [Authorize(Roles = "Volunteer")]
+    [HttpGet("future")]
+    public Task<IActionResult> GetFuture()
+    {
+        return GetByRegistrationDate(isFuture: true);
+    }
+
+    [Authorize(Roles = "Volunteer")]
+    [HttpGet("history")]
+    public Task<IActionResult> GetHistory()
+    {
+        return GetByRegistrationDate(isFuture: false);
+    }
+
+    private async Task<IActionResult> GetByRegistrationDate(bool isFuture)
+    {
+        var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(userIdClaim, out var volunteerId))
+        {
+            return Unauthorized(new WrapperData<string>
+            {
+                Message = "The authenticated user is invalid.",
+                Data = null
+            });
+        }
+
+        var currentDateTime = DateTime.Now;
+        var query = _db.Registrations
+            .AsNoTracking()
+            .Where(registration => registration.VolunteerId == volunteerId);
+
+        query = isFuture
+            ? query.Where(registration => registration.RegistrationDate >= currentDateTime)
+            : query.Where(registration => registration.RegistrationDate < currentDateTime);
+
+        var orderedQuery = isFuture
+            ? query.OrderBy(registration => registration.RegistrationDate)
+                .ThenBy(registration => registration.CampaignId)
+            : query.OrderByDescending(registration => registration.RegistrationDate)
+                .ThenBy(registration => registration.CampaignId);
+
+        var registrations = await orderedQuery
+            .Select(registration => new ResponseRegisteredCampaign
+            {
+                CampaignId = registration.Campaign.CampaignId,
+                Title = registration.Campaign.Title,
+                Location = registration.Campaign.Location,
+                EventDate = registration.Campaign.EventDate,
+                AdminId = registration.Campaign.AdminId,
+                CreatedAt = registration.Campaign.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(new WrapperData<List<ResponseRegisteredCampaign>>
+        {
+            Message = isFuture
+                ? "Future registered campaigns retrieved successfully."
+                : "Campaign registration history retrieved successfully.",
+            Data = registrations
+        });
+    }
+
+    [Authorize(Roles = "Admin, Staff")]
     [HttpGet("list/{campaignId:int}")]
     public async Task<IActionResult> GetByCampaignId(int campaignId)
     {
