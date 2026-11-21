@@ -107,31 +107,7 @@ public class HealthScreeningController : ControllerBase
                 Data = null
             });
         }
-
-        var isRegistered = await _db.Registrations.AnyAsync(registration =>
-            registration.VolunteerId == request.VolunteerId &&
-            registration.CampaignId == request.CampaignId);
-        if (!isRegistered)
-        {
-            return BadRequest(new WrapperData<string>
-            {
-                Message = "The volunteer has not registered for this campaign.",
-                Data = null
-            });
-        }
-
-        var screeningExists = await _db.HealthScreenings.AnyAsync(screening =>
-            screening.VolunteerId == request.VolunteerId &&
-            screening.CampaignId == request.CampaignId);
-        if (screeningExists)
-        {
-            return Conflict(new WrapperData<string>
-            {
-                Message = "A health screening record already exists for this volunteer and campaign.",
-                Data = null
-            });
-        }
-
+        
         var screening = new HealthScreening
         {
             VolunteerId = request.VolunteerId,
@@ -168,17 +144,19 @@ public class HealthScreeningController : ControllerBase
         }
 
         var screeningResult = request.ScreeningResult.Trim();
-        if (!screeningResult.Equals("Passed", StringComparison.OrdinalIgnoreCase) &&
+        if (!screeningResult.Equals("None", StringComparison.OrdinalIgnoreCase) &&
+            !screeningResult.Equals("Passed", StringComparison.OrdinalIgnoreCase) &&
             !screeningResult.Equals("Failed", StringComparison.OrdinalIgnoreCase))
         {
             return BadRequest(new WrapperData<string>
             {
-                Message = "Screening result must be Passed or Failed.",
+                Message = "Screening result must be None, Passed, or Failed.",
                 Data = null
             });
         }
 
         var isFailed = screeningResult.Equals("Failed", StringComparison.OrdinalIgnoreCase);
+        var isNone = screeningResult.Equals("None", StringComparison.OrdinalIgnoreCase);
         if (isFailed && string.IsNullOrWhiteSpace(request.RejectionReason))
         {
             return BadRequest(new WrapperData<string>
@@ -214,7 +192,7 @@ public class HealthScreeningController : ControllerBase
             });
         }
 
-        screening.ScreeningResult = isFailed ? "Failed" : "Passed";
+        screening.ScreeningResult = isNone ? "None" : isFailed ? "Failed" : "Passed";
         screening.RejectionReason = isFailed ? request.RejectionReason!.Trim() : null;
         screening.StaffId = staffId;
 
@@ -307,6 +285,12 @@ public class HealthScreeningController : ControllerBase
             return true;
         }
 
+        if (value.Trim().Equals("None", StringComparison.OrdinalIgnoreCase))
+        {
+            screeningResult = "None";
+            return true;
+        }
+
         if (value.Trim().Equals("Failed", StringComparison.OrdinalIgnoreCase))
         {
             if (string.IsNullOrWhiteSpace(rejectionReason))
@@ -320,7 +304,7 @@ public class HealthScreeningController : ControllerBase
             return true;
         }
 
-        validationMessage = "Screening result must be Passed or Failed.";
+        validationMessage = "Screening result must be None, Passed, or Failed.";
         return false;
     }
 
