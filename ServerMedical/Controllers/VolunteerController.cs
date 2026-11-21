@@ -19,6 +19,39 @@ public class VolunteerController : ControllerBase
         _db = db;
     }
 
+    [Authorize(Roles = "Admin, Staff")]
+    [HttpGet("list")]
+    public async Task<IActionResult> GetList()
+    {
+        var volunteers = await _db.Users
+            .AsNoTracking()
+            .Where(user => user.Role == "Volunteer")
+            .OrderBy(user => user.LastName)
+            .ThenBy(user => user.FirstName)
+            .Select(user => new ResponseVolunteerProfile
+            {
+                VolunteerId = user.UserId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                FullName = $"{user.FirstName} {user.LastName}".Trim(),
+                Email = user.Email,
+                Phone = user.Phone,
+                DateOfBirth = user.DateOfBirth,
+                Gender = user.Gender,
+                Avatar = user.Avatar,
+                CreatedAt = user.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(new WrapperData<List<ResponseVolunteerProfile>>
+        {
+            Message = volunteers.Count == 0
+                ? "No volunteer profile found."
+                : "Volunteer profiles retrieved successfully.",
+            Data = volunteers
+        });
+    }
+
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string? text)
     {
