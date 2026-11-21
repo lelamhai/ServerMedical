@@ -400,6 +400,31 @@ public class CampaignController : ControllerBase
         });
     }
 
+    [Authorize]
+    [HttpGet("upcoming")]
+    public async Task<IActionResult> GetUpcoming()
+    {
+        var today = DateTime.Today;
+
+        var campaigns = await _db.Campaigns
+            .AsNoTracking()
+            .Include(campaign => campaign.CampaignAssignments)
+                .ThenInclude(assignment => assignment.Staff)
+            .Where(campaign => campaign.EventDate >= today)
+            .OrderBy(campaign => campaign.EventDate)
+            .ToListAsync();
+
+        var response = campaigns.Select(MapCampaignResponse).ToList();
+
+        return Ok(new WrapperData<List<ResponseCampaign>>
+        {
+            Message = response.Count == 0
+                ? "No upcoming campaigns found."
+                : "Upcoming campaigns retrieved successfully.",
+            Data = response
+        });
+    }
+
     [AllowAnonymous]
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string? text)
