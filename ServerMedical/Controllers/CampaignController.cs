@@ -435,8 +435,8 @@ public class CampaignController : ControllerBase
             .AsNoTracking()
             .Include(campaign => campaign.CampaignAssignments)
                 .ThenInclude(assignment => assignment.Staff)
-            .Where(campaign => campaign.EventDate >= today.AddDays(-1)
-                && campaign.EventDate < today.AddDays(16))
+            .Where(campaign => campaign.EventDate >= today.AddDays(-15)
+                && campaign.EventDate < today)
             .OrderByDescending(campaign => campaign.EventDate)
             .ToListAsync();
 
